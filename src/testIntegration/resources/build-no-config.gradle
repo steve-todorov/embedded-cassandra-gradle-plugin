@@ -1,0 +1,48 @@
+import java.nio.file.Path
+
+plugins {
+    id 'java-library'
+    id 'org.carlspring.gradle.plugins.embedded.cassandra' version '1.0.0-SNAPSHOT'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+}
+
+tasks.register('customTask') {
+    dependsOn 'startCassandra'
+    finalizedBy 'stopCassandra'
+}
+
+tasks.register('customTaskSimulatingFailure') {
+    dependsOn 'startCassandra'
+    doLast {
+        throw RuntimeException('simulating failure')
+    }
+    finalizedBy 'stopCassandra'
+}
+
+cassandra {
+    workingDirectory = Path.of("${project.buildDir}/cassandra/my-example")
+
+    jvmOptions = ['-Xms1024m', '-Xmx1024m']
+
+    configProperties = [:]
+    configProperties.put('authenticator', 'PasswordAuthenticator')
+    configProperties.put('authorizer', 'CassandraAuthorizer')
+    configProperties.put('num_tokens', 1) // check notes below for explanation why this is 1 and not 256
+
+    systemProperties = [:]
+    systemProperties.put('cassandra.skip_wait_for_gossip_to_settle', 0)
+    systemProperties.put('cassandra.load_ring_state', false)
+    systemProperties.put('cassandra.initial_token', 1)
+    systemProperties.put('cassandra.num_tokens', 'nil')
+    systemProperties.put('cassandra.allocate_tokens_for_local_replication_factor', 'nil')
+    systemProperties.put('num_tokens', 1)
+    systemProperties.put('allocate_tokens_for_local_replication_factor', 1)
+}

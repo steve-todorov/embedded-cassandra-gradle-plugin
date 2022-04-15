@@ -1,0 +1,18 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        flatDir {
+            it.dirs("libs")
+        }
+    }
+
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "org.carlspring.gradle.plugins.embedded.cassandra") {
+                useModule("org.carlspring.gradle.plugins:embedded-cassandra-gradle-plugin:${requested.version}")
+            }
+        }
+    }
+}
+
+rootProject.name = "integration-test-gradle"
