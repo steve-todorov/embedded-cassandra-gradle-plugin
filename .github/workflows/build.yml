@@ -1,3 +1,4 @@
+# This workflow works, but C* does not start in time for these tests to work in a reasonable manner.
 name: Build and test
 on:
   # Build PRs
