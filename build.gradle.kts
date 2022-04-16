@@ -18,7 +18,7 @@ repositories {
 }
 
 version = "1.0.0-SNAPSHOT"
-extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
+extra["isReleaseVersion"] = !version.toString().toLowerCase().endsWith("snapshot")
 
 gradlePlugin {
     plugins {
@@ -91,7 +91,7 @@ tasks {
             // set to false to hide exception causes
             showCauses = true
             // set threshold in milliseconds to highlight slow tests
-            slowThreshold = 2000
+            slowThreshold = 20000
             // displays a breakdown of passes, failures and skips along with total duration
             showSummary = true
             // set to true to see simple class names
@@ -124,13 +124,16 @@ tasks {
         finalizedBy(named("publishToMavenLocal"))
     }
 
+    withType<Sign>() {
+        onlyIf {
+            (project.extra["isReleaseVersion"] as Boolean) && gradle.taskGraph.hasTask("publish")
+        }
+    }
+
 }
 
 signing {
-    // run the signing only when publishing is involved.
-    setRequired((project.extra["isReleaseVersion"] as Boolean)  && gradle.taskGraph.hasTask("publish"))
     useGpgCmd()
-    //sign(configurations.archives.get())
     sign(publishing.publications)
 }
 
