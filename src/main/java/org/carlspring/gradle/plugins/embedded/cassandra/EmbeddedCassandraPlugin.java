@@ -36,19 +36,9 @@ public class EmbeddedCassandraPlugin
             // will not work.
             int jdkVersion = Runtime.version().feature();
             if (jdkVersion >= 15 && jdkVersion < 18) {
-
-                if (builder.getVersion().getMajor() <= 4) {
-                    System.out.println("[WARNING] You have requested Cassandra v4 which officially supports only for JDK 8 and 11. However you are " +
-                                       "about to run this build using " + Runtime.version().toString() + " which is not officially supported yet.");
-
-                    if(container.getCassandra4JVMAutoFix()) {
-                        System.out.println(JVM_AUTOFIX_MESSAGE);
-                        System.out.println("[WARNING] To disable this set cassandra { cassandra4JDKAutoFix = false } in the DSL\n");
-
-                        builder.addWorkingDirectoryResource(new ClassPathResource("cassandra/server/jvm17-clients.options"), "conf/jvm11-clients.options")
-                               .addWorkingDirectoryResource(new ClassPathResource("cassandra/server/jvm17-server.options"), "conf/jvm11-server.options");
-                    }
-
+                if (builder.getVersion().getMajor() <= 4 && container.getCassandra4JVMAutoFix()) {
+                    builder.addWorkingDirectoryResource(new ClassPathResource("cassandra/server/jvm17-clients.options"), "conf/jvm11-clients.options")
+                           .addWorkingDirectoryResource(new ClassPathResource("cassandra/server/jvm17-server.options"), "conf/jvm11-server.options");
                 }
             }
             else if (jdkVersion == 18) {
