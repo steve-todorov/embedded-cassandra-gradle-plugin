@@ -31,6 +31,9 @@ pipeline {
     triggers {
         cron cronString
     }
+    options {
+        disableConcurrentBuilds abortPrevious: true
+    }
     stages {
         stage('Node') {
             steps {
