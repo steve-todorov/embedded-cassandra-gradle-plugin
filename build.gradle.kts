@@ -17,8 +17,9 @@ repositories {
     mavenCentral()
 }
 
-version = "1.0.0-SNAPSHOT"
 extra["isReleaseVersion"] = !version.toString().toLowerCase().endsWith("snapshot")
+
+println("Building version: $version")
 
 gradlePlugin {
     plugins {
