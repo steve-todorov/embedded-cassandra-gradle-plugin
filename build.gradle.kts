@@ -38,7 +38,6 @@ java {
 }
 
 dependencies {
-    implementation(gradleApi())
     implementation("com.github.nosan:embedded-cassandra:4.0.7")
     testImplementation(platform("org.junit:junit-bom:5.8.1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
