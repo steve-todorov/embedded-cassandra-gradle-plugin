@@ -62,6 +62,7 @@ tasks {
         attrs["Build-JDK"] = System.getProperty("java.version")
         attrs["Build-Gradle"] = project.gradle.gradleVersion
         attrs["Build-OS"] = System.getProperty("os.name")
+        attrs["Build-Automatic"] = System.getProperty("CI", "false")
         manifest.attributes(attrs)
     }
 
