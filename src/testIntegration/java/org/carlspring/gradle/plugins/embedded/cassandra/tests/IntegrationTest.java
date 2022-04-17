@@ -47,7 +47,7 @@ public class IntegrationTest
         assertTrue(result.getOutput().contains("Starting Cassandra in"));
         assertTrue(result.getOutput().contains("Stopping Cassandra in"));
         assertTrue(result.getOutput().contains(projectDir.resolve("build/cassandra").toString()));
-
+        assertDefaultPorts(result.getOutput());
     }
 
     @EnabledForJreRange(max = JRE.JAVA_14)
@@ -59,7 +59,6 @@ public class IntegrationTest
     public void shouldSucceedWhenNoJVMFixesAndUsingSupportedJDK(String buildFile, String settingsFile) throws IOException
     {
         Path projectDir = generateProject(settingsFile, buildFile);
-        // Paths.get("build/generated/testIntegrationProjects/" + type + "/shouldSucceedWhenNoJVMFixesAndUsingSupportedJDK");
 
         // Run the build
         BuildResult result = GradleRunner.create().forwardOutput().withPluginClasspath().withDebug(true)
@@ -74,6 +73,7 @@ public class IntegrationTest
         assertTrue(result.getOutput().contains("Starting Cassandra in"));
         assertTrue(result.getOutput().contains("Stopping Cassandra in"));
         assertTrue(result.getOutput().contains(projectDir.resolve("build/cassandra/my-example").toString()));
+        assertDefaultPorts(result.getOutput());
     }
 
     @EnabledForJreRange(min = JRE.JAVA_15)
@@ -98,6 +98,7 @@ public class IntegrationTest
         assertFalse(result.getOutput().contains("Stopping Cassandra in"));
         assertTrue(result.getOutput().contains("Error: A fatal exception has occurred. Program will exit"));
         assertTrue(result.getOutput().contains(projectDir.resolve("build/cassandra/my-example").toString()));
+        assertDefaultPorts(result.getOutput());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -124,6 +125,7 @@ public class IntegrationTest
         assertTrue(result.getOutput().contains("Starting Cassandra in"));
         assertTrue(result.getOutput().contains("Stopping Cassandra in"));
         assertTrue(result.getOutput().contains(projectDir.resolve("build/cassandra/my-example").toString()));
+        assertDefaultPorts(result.getOutput());
     }
 
     @ParameterizedTest(name = "{0}")
@@ -148,6 +150,41 @@ public class IntegrationTest
         assertTrue(result.getOutput().contains("Stopping Cassandra in"));
         assertTrue(result.getOutput().contains(projectDir.resolve("build/cassandra/my-example").toString()));
         assertTrue(result.getOutput().contains("customTaskSimulatingFailure FAILED"));
+        assertDefaultPorts(result.getOutput());
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+            "build-with-custom-port-config.gradle,settings.gradle",
+            "build-with-custom-port-config.gradle.kts,settings.gradle.kts",
+    })
+    public void shouldStopCassandraWithCustomPort(String buildFile, String settingsFile) throws IOException
+    {
+        Path projectDir = generateProject(settingsFile, buildFile);
+
+        // Run the build
+        BuildResult result = GradleRunner.create().forwardOutput().withPluginClasspath().withDebug(true)
+                                         .withArguments("customTask", "--stacktrace")
+                                         .withProjectDir(projectDir.toFile())
+                                         .build();
+
+        assertEquals(TaskOutcome.SUCCESS, result.task(":startCassandra").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":customTask").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, result.task(":stopCassandra").getOutcome());
+
+        assertTrue(result.getOutput().contains("Starting Cassandra in"));
+        assertTrue(result.getOutput().contains("Stopping Cassandra in"));
+        assertTrue(result.getOutput().contains(projectDir.resolve("build/cassandra/my-example").toString()));
+        assertTrue(result.getOutput().contains("cassandra.storage.port = 18000"));
+        assertTrue(result.getOutput().contains("cassandra.storage.port.ssl = 18001"));
+        assertTrue(result.getOutput().contains("cassandra.native.transport.port = 18002"));
+    }
+
+    public void assertDefaultPorts(String output)
+    {
+        assertTrue(output.contains("cassandra.storage.port = 7000"));
+        assertTrue(output.contains("cassandra.storage.port.ssl = 7001"));
+        assertTrue(output.contains("cassandra.native.transport.port = 9042"));
     }
 
     private Path generateProject(String settingsFile, String buildFile) throws IOException
@@ -163,9 +200,9 @@ public class IntegrationTest
         if (frame != null) {
             projectDir = projectDir.resolve(frame.getMethodName());
         }
-        else {
-            projectDir = projectDir.resolve(UUID.randomUUID().toString().substring(24, 30));
-        }
+
+        // This is here to allow parallel tests to run.
+        projectDir = projectDir.resolve(UUID.randomUUID().toString().substring(28, 34));
 
         if (projectDir.toAbsolutePath().toFile().exists()) {
             System.out.println("Cleaning " + projectDir);

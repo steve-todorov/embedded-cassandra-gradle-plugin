@@ -24,13 +24,10 @@ tasks.register<Task>("customTask") {
     finalizedBy("stopCassandra")
 }
 
-tasks.register<Task>("customTaskSimulatingFailure") {
-    dependsOn("startCassandra")
-    doLast {
-        println("cassandra.storage.port = " + System.getProperty("cassandra.storage.port"));
-        println("cassandra.storage.port.ssl = " + System.getProperty("cassandra.storage.port.ssl"));
-        println("cassandra.native.transport.port = " + System.getProperty("cassandra.native.transport.port"));
-        throw RuntimeException("simulating failure")
-    }
-    finalizedBy("stopCassandra")
+cassandra {
+    workingDirectory = Path.of("${project.buildDir}/cassandra/my-example")
+    defaultTestSettings()
+    configProperties.put("storage_port", 18000) // default is 7000
+    configProperties.put("ssl_storage_port", 18001) // default is 7001
+    configProperties.put("native_transport_port", 18002) // default is 9042
 }

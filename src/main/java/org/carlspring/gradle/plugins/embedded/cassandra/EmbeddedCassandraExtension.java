@@ -5,11 +5,15 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
 
 import javax.inject.Inject;
+import java.io.IOException;
+import java.net.ServerSocket;
 import java.nio.file.Path;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 
 public abstract class EmbeddedCassandraExtension
 {
@@ -137,11 +141,30 @@ public abstract class EmbeddedCassandraExtension
 
     public void defaultTestSettings()
     {
-        jvmOptions.addAll(List.of("-Xms1024m", "-Xmx1024m"));
+        defaultTestSettings(false);
+    }
+
+    public void defaultTestSettings(boolean randomPorts)
+    {
+        jvmOptions.addAll(List.of("-Xms2048m", "-Xmx2048m"));
 
         configProperties.put("authenticator", "PasswordAuthenticator");
         configProperties.put("authorizer", "CassandraAuthorizer");
         configProperties.put("num_tokens", 1);
+
+        // Setting random cassandra ports to enable parallel tests.
+        Integer storagePort = randomPorts ? findRandomOpenPort() : 7000;
+        Integer storagePortSsl = randomPorts ? findRandomOpenPort() : 7001;
+        Integer nativeTransportPort = randomPorts ? findRandomOpenPort() : 9042;
+        configProperties.put("storage_port", storagePort); // default is 7000
+        configProperties.put("ssl_storage_port", storagePortSsl); // default is 7001
+        configProperties.put("native_transport_port", nativeTransportPort); // default is 9042
+        // /Setting random cassandra ports to enable parallel tests.
+
+        configProperties.put("hints_flush_period_in_ms", 5000); // defaults to 10000
+        configProperties.put("commitlog_sync_period_in_ms", 5000); // defaults to 10000
+        configProperties.put("range_request_timeout_in_ms", 5000); // defaults to 10000
+        configProperties.put("request_timeout_in_ms", 5000); // defaults to 10000
 
         // Settings below are very adequate for TESTING purposes - they disable some replication configuration that
         // results in significantly faster start-up time (before - 50s; after - 12s)
@@ -161,7 +184,16 @@ public abstract class EmbeddedCassandraExtension
 
         // Cassandra takes longer on machines with less than 4 CPUS (i.e. Github Actions)
         startupTimeout = Duration.ofMillis(240000L);
+    }
 
+    public synchronized Integer findRandomOpenPort()
+    {
+        try (java.net.ServerSocket socket = new ServerSocket(new SecureRandom().nextInt(65000 - 35000 + 1) + 35000)) {
+            return socket.getLocalPort();
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

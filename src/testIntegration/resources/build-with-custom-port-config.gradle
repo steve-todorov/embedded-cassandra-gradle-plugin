@@ -1,3 +1,5 @@
+import java.nio.file.Path
+
 plugins {
     id 'java-library'
     id 'org.carlspring.gradle.plugins.embedded.cassandra' version '1.0.0-SNAPSHOT'
@@ -22,13 +24,10 @@ tasks.register('customTask') {
     finalizedBy 'stopCassandra'
 }
 
-tasks.register('customTaskSimulatingFailure') {
-    dependsOn 'startCassandra'
-    doLast {
-        println("CASSANDRA_STORAGE_PORT = " + System.getenv("CASSANDRA_STORAGE_PORT"));
-        println("CASSANDRA_STORAGE_PORT_SSL = " + System.getenv("CASSANDRA_STORAGE_PORT_SSL"));
-        println("CASSANDRA_NATIVE_TRANSPORT_PORT = " + System.getenv("CASSANDRA_NATIVE_TRANSPORT_PORT"));
-        throw RuntimeException('simulating failure')
-    }
-    finalizedBy 'stopCassandra'
+cassandra {
+    workingDirectory = Path.of("${project.buildDir}/cassandra/my-example")
+    defaultTestSettings()
+    configProperties.put("storage_port", 18000) // default is 7000
+    configProperties.put("ssl_storage_port", 18001) // default is 7001
+    configProperties.put("native_transport_port", 18002) // default is 9042
 }

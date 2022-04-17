@@ -16,12 +16,20 @@ dependencies {
 
 tasks.register('customTask') {
     dependsOn 'startCassandra'
+    doLast {
+        println("cassandra.storage.port = " + System.getProperty("cassandra.storage.port"));
+        println("cassandra.storage.port.ssl = " + System.getProperty("cassandra.storage.port.ssl"));
+        println("cassandra.native.transport.port = " + System.getProperty("cassandra.native.transport.port"));
+    }
     finalizedBy 'stopCassandra'
 }
 
 tasks.register('customTaskSimulatingFailure') {
     dependsOn 'startCassandra'
     doLast {
+        println("cassandra.storage.port = " + System.getProperty("cassandra.storage.port"));
+        println("cassandra.storage.port.ssl = " + System.getProperty("cassandra.storage.port.ssl"));
+        println("cassandra.native.transport.port = " + System.getProperty("cassandra.native.transport.port"));
         throw RuntimeException('simulating failure')
     }
     finalizedBy 'stopCassandra'
@@ -30,7 +38,7 @@ tasks.register('customTaskSimulatingFailure') {
 cassandra {
     workingDirectory = Path.of("${project.buildDir}/cassandra/my-example")
 
-    jvmOptions = ['-Xms1024m', '-Xmx1024m']
+    jvmOptions = ['-Xms2048m', '-Xmx2048m']
 
     configProperties = [:]
     configProperties.put('authenticator', 'PasswordAuthenticator')

@@ -16,12 +16,20 @@ dependencies {
 
 tasks.register<Task>("customTask") {
     dependsOn("startCassandra")
+    doLast {
+        println("cassandra.storage.port = " + System.getProperty("cassandra.storage.port"));
+        println("cassandra.storage.port.ssl = " + System.getProperty("cassandra.storage.port.ssl"));
+        println("cassandra.native.transport.port = " + System.getProperty("cassandra.native.transport.port"));
+    }
     finalizedBy("stopCassandra")
 }
 
 tasks.register<Task>("customTaskSimulatingFailure") {
     dependsOn("startCassandra")
     doLast {
+        println("cassandra.storage.port = " + System.getProperty("cassandra.storage.port"));
+        println("cassandra.storage.port.ssl = " + System.getProperty("cassandra.storage.port.ssl"));
+        println("cassandra.native.transport.port = " + System.getProperty("cassandra.native.transport.port"));
         throw RuntimeException("simulating failure")
     }
     finalizedBy("stopCassandra")

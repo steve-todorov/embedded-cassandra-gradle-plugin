@@ -2,6 +2,7 @@ package org.carlspring.gradle.plugins.embedded.cassandra;
 
 import com.github.nosan.embedded.cassandra.Cassandra;
 import com.github.nosan.embedded.cassandra.CassandraBuilder;
+import com.github.nosan.embedded.cassandra.SimpleSeedProviderConfigurator;
 import com.github.nosan.embedded.cassandra.commons.ClassPathResource;
 import org.carlspring.gradle.plugins.embedded.cassandra.tasks.StartCassandraTask;
 import org.carlspring.gradle.plugins.embedded.cassandra.tasks.StopCassandraTask;
@@ -58,6 +59,17 @@ public class EmbeddedCassandraPlugin
             builder.jvmOptions(container.getJvmOptions());
             builder.configProperties(container.getConfigProperties());
             builder.systemProperties(container.getSystemProperties());
+
+            builder.configure(new SimpleSeedProviderConfigurator("127.0.0.1:" + container.getConfigProperties()
+                                                                                         .getOrDefault("storage_port", 7000)));
+
+            Integer storagePort = (Integer) container.getConfigProperties().getOrDefault("storage_port", 7000);
+            Integer storagePortSsl = (Integer) container.getConfigProperties().getOrDefault("ssl_storage_port", 7001);
+            Integer nativeTransportPort = (Integer) container.getConfigProperties().getOrDefault("native_transport_port", 9042);
+
+            System.getProperties().put("cassandra.storage.port", String.valueOf(storagePort));
+            System.getProperties().put("cassandra.storage.port.ssl", String.valueOf(storagePortSsl));
+            System.getProperties().put("cassandra.native.transport.port", String.valueOf(nativeTransportPort));
 
             builder.startupTimeout(container.getStartupTimeout());
 

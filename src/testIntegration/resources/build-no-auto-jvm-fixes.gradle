@@ -16,36 +16,16 @@ dependencies {
 
 tasks.register('customTask') {
     dependsOn 'startCassandra'
-    finalizedBy 'stopCassandra'
-}
-
-tasks.register('customTaskSimulatingFailure') {
-    dependsOn 'startCassandra'
     doLast {
-        throw RuntimeException('simulating failure')
+        println("cassandra.storage.port = " + System.getProperty("cassandra.storage.port"));
+        println("cassandra.storage.port.ssl = " + System.getProperty("cassandra.storage.port.ssl"));
+        println("cassandra.native.transport.port = " + System.getProperty("cassandra.native.transport.port"));
     }
     finalizedBy 'stopCassandra'
 }
 
 cassandra {
-
     cassandra4JVMAutoFix = false
-
     workingDirectory = Path.of("${project.buildDir}/cassandra/my-example")
-
-    jvmOptions = ['-Xms1024m', '-Xmx1024m']
-
-    configProperties = [:]
-    configProperties.put('authenticator', 'PasswordAuthenticator')
-    configProperties.put('authorizer', 'CassandraAuthorizer')
-    configProperties.put('num_tokens', 1)
-
-    systemProperties = [:]
-    systemProperties.put('cassandra.skip_wait_for_gossip_to_settle', 0)
-    systemProperties.put('cassandra.load_ring_state', false)
-    systemProperties.put('cassandra.initial_token', 1)
-    systemProperties.put('cassandra.num_tokens', 'nil')
-    systemProperties.put('cassandra.allocate_tokens_for_local_replication_factor', 'nil')
-    systemProperties.put('num_tokens', 1)
-    systemProperties.put('allocate_tokens_for_local_replication_factor', 1)
+    defaultTestSettings()
 }

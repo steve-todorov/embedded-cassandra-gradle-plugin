@@ -68,6 +68,9 @@ tasks {
 
     val testTask by named<Test>("test") {
         useJUnitPlatform()
+        filter {
+            setFailOnNoMatchingTests(false)
+        }
     }
 
     val testIntegrationTask by register<Test>("testIntegration") {
@@ -79,8 +82,21 @@ tasks {
                 sourceSets.named("main").get().output.classesDirs
 
         useJUnitPlatform {
-            includeEngines("junit-platform-suite-engine", "junit-jupiter")
+            includeEngines("junit-jupiter")
+
+            // maxParallelForks will use multiple VMs and JUnit will parallelize test execution according to the configured
+            // parallelism in each of them.
+            // For example with maxParallelForks = 2 and junit.jupiter.execution.parallel.config.fixed.parallelism = 4,
+            // Gradle will fork two VMs and distribute the found test classes evenly among them. In each VM, JUnit will
+            // execute the tests in 4 concurrent threads.
+            systemProperty("junit.jupiter.execution.parallel.enabled", false)
+            systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
+            systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
+            systemProperty("junit.jupiter.execution.parallel.config.strategy",  "fixed")
+            systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism", 1)
         }
+
+        //maxParallelForks = (Runtime.getRuntime().availableProcessors() / 4).takeIf { it > 0 } ?: 1
 
         testlogger {
             theme = com.adarshr.gradle.testlogger.theme.ThemeType.MOCHA_PARALLEL
@@ -93,7 +109,7 @@ tasks {
             // set to false to hide exception causes
             showCauses = true
             // set threshold in milliseconds to highlight slow tests
-            slowThreshold = 20000
+            slowThreshold = 25000
             // displays a breakdown of passes, failures and skips along with total duration
             showSummary = true
             // set to true to see simple class names
