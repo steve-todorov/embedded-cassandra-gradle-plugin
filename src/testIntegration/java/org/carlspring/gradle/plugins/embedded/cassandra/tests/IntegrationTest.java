@@ -98,7 +98,6 @@ public class IntegrationTest
         assertFalse(result.getOutput().contains("Stopping Cassandra in"));
         assertTrue(result.getOutput().contains("Error: A fatal exception has occurred. Program will exit"));
         assertTrue(result.getOutput().contains(projectDir.resolve("build/cassandra/my-example").toString()));
-        assertDefaultPorts(result.getOutput());
     }
 
     @ParameterizedTest(name = "{0}")
