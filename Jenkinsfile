@@ -5,7 +5,7 @@ def GRADLE_USER_HOME = workspace().getJobCachePath() + "/.gradle"
 def IS_MASTER_BRANCH = 'master'.equals(env.BRANCH_NAME);
 
 // This is here because otherwise it will cron task all branches and we're only interested in the master.
-def cronString = IS_MASTER_BRANCH ? "0 10,22 * * 1-5" : ""
+def cronString = IS_MASTER_BRANCH ? "H 10-12 * * 1" : ""
 
 def fetchVersionFromPropertiesFile() {
     return readProperties(defaults: [:], file: "${env.WORKSPACE}/gradle.properties").getOrDefault('version', 'not-found');
