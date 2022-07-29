@@ -87,6 +87,24 @@ pipeline {
             archiveArtifacts artifacts: '**/build/libs/**', fingerprint: true
             archiveArtifacts artifacts: '**/build/publications/**', fingerprint: true
         }
+        failure {
+            withCredentials([string(credentialsId: '2d4041b1-de6f-4a60-99e1-7d77ba9affa0', variable: 'MM_TOKEN')]) {
+                script {
+                    def endpoint = "https://mattermost.carlspring.org/hooks/${env.MM_TOKEN}"
+                    mattermostSend color: "#ED2938", endpoint: endpoint, channel: '#iris',
+                                   message: "[${env.JOB_NAME} ${env.BUILD_NUMBER}](${env.BUILD_URL}) has failed!"
+                }
+            }
+        }
+        fixed {
+            withCredentials([string(credentialsId: '2d4041b1-de6f-4a60-99e1-7d77ba9affa0', variable: 'MM_TOKEN')]) {
+                script {
+                    def endpoint = "https://mattermost.carlspring.org/hooks/${env.MM_TOKEN}"
+                    mattermostSend color: "#28CC2D", endpoint: endpoint, channel: '#iris',
+                                   message: "[${env.JOB_NAME} ${env.BUILD_NUMBER}](${env.BUILD_URL}) has fixed previous failure"
+                }
+            }
+        }
     }
 
 }
