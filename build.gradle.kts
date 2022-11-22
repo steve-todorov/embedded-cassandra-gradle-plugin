@@ -8,7 +8,7 @@ plugins {
     `java-gradle-plugin`
     `maven-publish`
     signing
-    id("com.adarshr.test-logger") version "3.1.0"
+    alias(pluginLibs.plugins.test.logger)
 }
 
 repositories {
@@ -38,18 +38,116 @@ java {
 }
 
 dependencies {
-    implementation("com.github.nosan:embedded-cassandra:4.0.7")
-    testImplementation(platform("org.junit:junit-bom:5.8.1"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.junit.platform:junit-platform-suite-engine")
+    implementation(appLibs.embedded.cassandra)
+    testImplementation(platform(testLibs.junit.bom))
+    testImplementation(testLibs.junit.jupiter)
+    testImplementation(testLibs.junit.platform.suite.engine)
 }
 
-val testIntegrationSourceSet = sourceSets.create("testIntegration")
+// Configure multiple test sources
+testing {
+    suites {
+        // Just for self reference, technically this is already configured by default.
+        val test by getting(JvmTestSuite::class) {
+            targets {
+                all {
+                    testTask.configure {
+                        useJUnitPlatform {
+                            filter {
+                                setFailOnNoMatchingTests(false)
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-// Inherits the dependencies from the master build.gradle.kts
-configurations[testIntegrationSourceSet.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
-// Append to existing source sets.
-gradlePlugin.testSourceSet(testIntegrationSourceSet)
+        // testIntegration test sources
+        //check https://github.com/gradle/gradle/pull/21012 for more examples
+        val testIntegration by registering(JvmTestSuite::class) {
+            val self = this
+            testType.set(TestSuiteType.INTEGRATION_TEST)
+
+            // We need to manually add the "main" sources to the classpath.
+            val testIntegrationSourceSet by sourceSets.named(self.name) {
+                compileClasspath += sourceSets.main.get().output
+                runtimeClasspath += sourceSets.main.get().output
+            }
+
+            // Inherit implementation, runtime and test dependencies (adds them to the compile classpath)
+            configurations.named("${self.name}Implementation") {
+                extendsFrom(configurations.testImplementation.get())
+                extendsFrom(configurations.runtimeOnly.get())
+                extendsFrom(configurations.implementation.get())
+            }
+
+            // Append the testIntegration source set to gradle plugin metadata.
+            gradlePlugin.testSourceSet(testIntegrationSourceSet)
+
+            // suite targets = collection of tests to be executed in a particular context (i.e. OS, JDK, etc)
+            targets {
+                all {
+                    // reminder: testTask references the "testIntegration" task - not to the "test" one.
+                    testTask.configure {
+                        useJUnitPlatform {
+                            includeEngines("junit-jupiter")
+
+                            // maxParallelForks will use multiple VMs and JUnit will parallelize test execution according to the configured
+                            // parallelism in each of them.
+                            // For example with maxParallelForks = 2 and junit.jupiter.execution.parallel.config.fixed.parallelism = 4,
+                            // Gradle will fork two VMs and distribute the found test classes evenly among them. In each VM, JUnit will
+                            // execute the tests in 4 concurrent threads.
+                            systemProperty("junit.jupiter.execution.parallel.enabled", false)
+                            systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
+                            systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
+                            systemProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
+                            systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism", 1)
+                        }
+                        shouldRunAfter(test)
+                    }
+                }
+            }
+
+            // Make sure the integration test is executed as part of the "check" task.
+            tasks.named<Task>("check") {
+                dependsOn(named<JvmTestSuite>(self.name))
+            }
+
+            // logging config.
+            testlogger {
+                theme = com.adarshr.gradle.testlogger.theme.ThemeType.MOCHA_PARALLEL
+                // set to false to disable detailed failure logs
+                showExceptions = true
+                // set to false to hide stack traces
+                showStackTraces = true
+                // set to true to remove any filtering applied to stack traces
+                showFullStackTraces = false
+                // set to false to hide exception causes
+                showCauses = true
+                // set threshold in milliseconds to highlight slow tests
+                slowThreshold = 25000
+                // displays a breakdown of passes, failures and skips along with total duration
+                showSummary = true
+                // set to true to see simple class names
+                showSimpleNames = false
+                // set to false to hide passed tests
+                showPassed = true
+                // set to false to hide skipped tests
+                showSkipped = true
+                // set to false to hide failed tests
+                showFailed = true
+                // enable to see standard out and error streams inline with the test results
+                showStandardStreams = false
+                // set to false to hide passed standard out and error streams
+                showPassedStandardStreams = true
+                // set to false to hide skipped standard out and error streams
+                showSkippedStandardStreams = true
+                // set to false to hide failed standard out and error streams
+                showFailedStandardStreams = true
+            }
+        }
+    }
+}
 
 tasks {
 
@@ -65,78 +163,6 @@ tasks {
         manifest.attributes(attrs)
     }
 
-    val testTask by named<Test>("test") {
-        useJUnitPlatform()
-        filter {
-            setFailOnNoMatchingTests(false)
-        }
-    }
-
-    val testIntegrationTask by register<Test>("testIntegration") {
-        group = "verification"
-
-        testClassesDirs = testIntegrationSourceSet.output.classesDirs
-        classpath = configurations[testIntegrationSourceSet.runtimeClasspathConfigurationName] +
-                testIntegrationSourceSet.output +
-                sourceSets.named("main").get().output.classesDirs
-
-        useJUnitPlatform {
-            includeEngines("junit-jupiter")
-
-            // maxParallelForks will use multiple VMs and JUnit will parallelize test execution according to the configured
-            // parallelism in each of them.
-            // For example with maxParallelForks = 2 and junit.jupiter.execution.parallel.config.fixed.parallelism = 4,
-            // Gradle will fork two VMs and distribute the found test classes evenly among them. In each VM, JUnit will
-            // execute the tests in 4 concurrent threads.
-            systemProperty("junit.jupiter.execution.parallel.enabled", false)
-            systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
-            systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
-            systemProperty("junit.jupiter.execution.parallel.config.strategy",  "fixed")
-            systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism", 1)
-        }
-
-        //maxParallelForks = (Runtime.getRuntime().availableProcessors() / 4).takeIf { it > 0 } ?: 1
-
-        testlogger {
-            theme = com.adarshr.gradle.testlogger.theme.ThemeType.MOCHA_PARALLEL
-            // set to false to disable detailed failure logs
-            showExceptions = true
-            // set to false to hide stack traces
-            showStackTraces = true
-            // set to true to remove any filtering applied to stack traces
-            showFullStackTraces = false
-            // set to false to hide exception causes
-            showCauses = true
-            // set threshold in milliseconds to highlight slow tests
-            slowThreshold = 25000
-            // displays a breakdown of passes, failures and skips along with total duration
-            showSummary = true
-            // set to true to see simple class names
-            showSimpleNames = false
-            // set to false to hide passed tests
-            showPassed = true
-            // set to false to hide skipped tests
-            showSkipped = true
-            // set to false to hide failed tests
-            showFailed = true
-            // enable to see standard out and error streams inline with the test results
-            showStandardStreams = false
-            // set to false to hide passed standard out and error streams
-            showPassedStandardStreams = true
-            // set to false to hide skipped standard out and error streams
-            showSkippedStandardStreams = true
-            // set to false to hide failed standard out and error streams
-            showFailedStandardStreams = true
-        }
-
-        // This task must run after unit tests.
-        mustRunAfter(testTask)
-    }
-
-    named<Task>("check") {
-        dependsOn(testIntegrationTask)
-    }
-
     named<Task>("build") {
         finalizedBy(named("publishToMavenLocal"))
     }
@@ -144,6 +170,26 @@ tasks {
     withType<Sign>() {
         onlyIf {
             (project.extra["isReleaseVersion"] as Boolean) && gradle.taskGraph.hasTask("publish")
+        }
+    }
+
+    create<Task>("printSourceSetInformation") {
+        group = "help"
+        doLast {
+            sourceSets.forEach { srcSet ->
+                println("=================================")
+                println("|| SourceSet: " + srcSet.name)
+                println("=================================")
+                println("|| + Source directories: " + srcSet.allJava.srcDirs)
+                println("|| + Output directories: " + srcSet.output.classesDirs.files)
+                println("|| + Resource directories: " + srcSet.resources.srcDirs)
+                println("|| + Compile classpath:")
+                srcSet.compileClasspath.files.sorted().forEach {
+                    println("|| ++> " + it.path)
+                }
+                println("=================================")
+                println()
+            }
         }
     }
 
